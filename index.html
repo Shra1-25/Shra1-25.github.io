@@ -407,5 +407,62 @@
     })();
 </script>
 
+<!-- ======== custom click tracking ======== -->
+<script>
+    (function() {
+        function platformFor(href) {
+            if (/scholar\.google/i.test(href)) return 'google_scholar';
+            if (/researchgate/i.test(href)) return 'researchgate';
+            if (/github\.com/i.test(href)) return 'github';
+            if (/linkedin\.com/i.test(href)) return 'linkedin';
+            if (/^mailto:/i.test(href)) return 'email';
+            if (/CV\.pdf/i.test(href)) return 'cv';
+            return 'other';
+        }
+        function clip(s, n) { return (s || '').trim().slice(0, n); }
+
+        document.addEventListener('click', function(e) {
+            var a = e.target.closest('a');
+            if (!a || !a.href) return;
+            if (typeof gtag !== 'function') return;
+
+            var href = a.href;
+
+            // CV download (anywhere on page)
+            if (/\/CV\.pdf(\?|$)/i.test(href)) {
+                gtag('event', 'cv_download', { file_name: 'CV.pdf', source: a.closest('.contact') ? 'header' : 'inline' });
+                return;
+            }
+
+            // Paper-row click — capture title + which kind of link
+            var pubEl = a.closest('.pub');
+            if (pubEl) {
+                var titleEl = pubEl.querySelector('.pub-title');
+                var title = clip(titleEl ? titleEl.textContent : 'unknown', 100);
+                var linkType = clip(a.textContent || (/\.pdf$/i.test(href) ? 'pdf' : 'link'), 30).toLowerCase();
+                gtag('event', 'paper_click', { paper_title: title, link_type: linkType, link_url: clip(href, 100) });
+                return;
+            }
+
+            // Header / contact-row clicks
+            if (a.closest('.contact')) {
+                gtag('event', 'social_click', { platform: platformFor(href), link_url: clip(href, 100) });
+                return;
+            }
+
+            // News-section outbound clicks
+            if (a.closest('.news') && a.host && a.host !== window.location.host) {
+                gtag('event', 'news_click', { link_text: clip(a.textContent, 60), link_url: clip(href, 100) });
+                return;
+            }
+
+            // Generic outbound fallback
+            if (a.host && a.host !== window.location.host) {
+                gtag('event', 'outbound_click', { link_text: clip(a.textContent, 60), link_url: clip(href, 100) });
+            }
+        });
+    })();
+</script>
+
 </body>
 </html>
